@@ -7,11 +7,11 @@ library(stringr)
 original_books=austen_books() %>%
   group_by(book)%>%
   mutate(linenumber=row_number(),
-         chapter=cumsum(str_detect(text,regex("^chapter[\\divxlc]",ignore.case=TRUE))))%>%
+         chapter=cumsum(str_detect(text,regex("^(Chapter|CHAPTER [\\dIVXLC])",ignore.case=TRUE))))%>%
   ungroup()
 
 original_books
-
+table(original_books$chapter)
 library(tidytext)
 
 #convert to one token per row format using the unnest_tokens function
@@ -217,5 +217,5 @@ tidy_books%>%
   summarise(negativewords=n())%>%
   left_join(wordcounts,by=c("book","chapter"))%>%
   mutate(ratio=negativewords/words)%>%
-  top_n()
+  top_n(1)
   
