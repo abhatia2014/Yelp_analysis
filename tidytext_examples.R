@@ -1,9 +1,12 @@
-# Jane Austin Novels using janeaustenr package
+
+
+# Evaluating Jane Austin Novels Using Janeautenr package ------------------
+
 
 library(janeaustenr)
 library(dplyr)
 library(stringr)
-
+?cumsum
 original_books=austen_books() %>%
   group_by(book)%>%
   mutate(linenumber=row_number(),
