@@ -6,7 +6,7 @@
 library(janeaustenr)
 library(dplyr)
 library(stringr)
-?cumsum
+
 original_books=austen_books() %>%
   group_by(book)%>%
   mutate(linenumber=row_number(),
@@ -14,7 +14,7 @@ original_books=austen_books() %>%
   ungroup()
 
 original_books
-table(original_books$chapter)
+table(original_books$chapter,by=original_books$book)
 library(tidytext)
 
 #convert to one token per row format using the unnest_tokens function
@@ -50,18 +50,19 @@ tidy_books%>%
 
 # Sentiment Analysis ------------------------------------------------------
 
-#using an inner join
+#using an inner join (intersection of x,y with columns from both)
 #inner join- returns all rows from x where there are matching values in y, and all 
 #columns from x and y
 
 #sentiments dataset
 data("sentiments")
+sentiments
 nrow(sentiments)
 str(sentiments)
 table(sentiments$lexicon)
 # 3 lexicons AFINN, bing, nrc
 
-table(sentiments$sentiment)
+table(sentiments$sentiment,by=sentiments$lexicon)
 #sentiments - anger, anticipation, disgust, fear, joy, negative, positive, sadness, surprise,trust
 
 #positive and negative part of the bing lexicon 
@@ -74,8 +75,8 @@ nrcjoy=sentiments%>%
 #total 689 words in the lexicon, let's see how many words in Emma novel
 
 tidy_books
-
-#using semi_join function of dplyr
+?semi_join
+#using semi_join function of dplyr (intersection, keeping just values of x)
 #semi_join- returns all rows of x where there are matching values in y,keeping
 #only columns from x
 
@@ -92,7 +93,7 @@ tidy_books%>%
 tidy_books%>%
   semi_join(nrcjoy)%>%
   count(word, sort=TRUE)
-#for all novels, hope is used 601 times
+#for all novels, hope is used 601 times and fried 593 times
 
 #lets now use bing lexicon to count the number of positive and negative words
 
@@ -121,6 +122,11 @@ janeautensentiment=tidy_books%>%
   # find the diffference of the positive and negative sentiment
   mutate(sentiment=positive-negative)
   
+#calculate the total sentiment
+
+janeautensentiment%>%
+  group_by(book)%>%
+  summarise(sum_sentiment=sum(sentiment))
 
 #now we can plot these sentiments across the plot trajectory of each novel
 
@@ -157,6 +163,7 @@ bingwordcounts%>%
 
 library(wordcloud)
 
+?wordcloud
 tidy_books%>%
   count(word)%>%
   with(wordcloud(word,n,max.words=100,random.color = TRUE))
