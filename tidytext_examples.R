@@ -229,3 +229,31 @@ tidy_books%>%
   mutate(ratio=negativewords/words)%>%
   top_n(1)
   
+
+# Network of Words --------------------------------------------------------
+
+pride_prejudice_words=tidy_books%>%
+  filter(book=="Pride & Prejudice")
+
+#pair_counts counts the pair of items that occur together within a group
+#here we count the words that occur together in pride and prejudice
+
+word_occurances=pride_prejudice_words%>%
+  pair_count(linenumber,word,sort=TRUE)
+  
+word_occurances
+
+#now we'll plot this as a network of co-occuring words with the igraph and ggraph packages
+install.packages("devtools")
+
+devtools::install_github('hadley/ggplot2')
+devtools::install_github('thomasp85/ggforce')
+devtools::install_github('thomasp85/ggraph')
+library(igraph)
+
+set.seed(1813)
+
+word_occurances %>%
+  filter(n>=10)%>%
+  graph_from_data_frame()
+  
