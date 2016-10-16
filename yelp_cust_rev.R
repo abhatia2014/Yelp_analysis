@@ -10,7 +10,10 @@ library(RJSONIO)
 
 list.files()
 lines=readLines("./yelp_dataset_challenge_academic_dataset/yelp_academic_dataset_business.json")
-business=as.data.frame(t(sapply(lines,fromJSON)))
+business=as.data.frame(t(sapply(lines,fromJSON)),row.names=FALSE)
+rm(lines)
+head(business)
+#now read the review file
 
-
-#now ready the
+lines= readLines("./yelp_dataset_challenge_academic_dataset/yelp_academic_dataset_review.json",n = 200000)
+review=as.data.frame(t(sapply(lines, fromJSON)),row.names=FALSE)
