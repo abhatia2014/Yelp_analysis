@@ -25,7 +25,7 @@ tidy_books=original_books%>%
 #725054 rows
 tidy_books
 #now the data is in one word per row format
-
+names(tidy_books)
 #We can now remove the stop words from the dataset using anti_join function of dplyr
 
 ?anti_join
@@ -94,6 +94,74 @@ tidy_books%>%
   semi_join(nrcjoy)%>%
   count(word, sort=TRUE)
 #for all novels, hope is used 601 times and fried 593 times
+
+#separate out the nrc lexicon
+
+emotion_words=sentiments%>%
+  filter(lexicon=="nrc")
+
+#find the number of emotion words by book
+
+
+book_emotions=tidy_books%>%
+  inner_join(emotion_words)%>%
+  group_by(book)%>%
+  count(sentiment,sort=TRUE)
+
+#count the total number of words by book
+word_book=tidy_books%>%
+  group_by(book)%>%
+  summarize(total_words=n())
+
+#join the dataframes book_emotions and word_book
+
+?semi_join
+
+book_emotions_join=book_emotions%>%
+  inner_join(word_book)%>%
+  mutate(emotion_percent=round(n/total_words*100,1))
+
+#plot it using ggplot
+#theme(axis.text.x=element_text(angle=90,hjust=1))+
+library(ggplot2)
+
+ggplot(book_emotions_join,aes(sentiment,emotion_percent,fill=sentiment))+geom_bar(stat='identity',show.legend = FALSE)+
+  facet_wrap(~book,scales = "free_y")+theme(axis.text.x=element_text(angle = 90,hjust=1))+
+  geom_text(aes(sentiment,emotion_percent,label=emotion_percent),size=3)+labs(x="Emotions",y="Emotion Percentage",title="Emotion analysis of Jane Austen Novels")
+
+ggplot(book_emotions,aes(book,n,fill=book))+geom_bar(stat='identity',show.legend = FALSE)+
+  facet_wrap(~sentiment,scales = "free_y")+theme(axis.text.x=element_text(angle = 90,hjust=1))+
+  geom_text(aes(book,n+5,label=n),size=3)+labs("Books",y="# of Instances",title="Tone Analysis of Jane Austin Novels")
+
+#we will find the flow of emotions through the chapters of a single book
+#let's look at the Book EMMA
+
+tidy_book_emma=tidy_books%>%
+  filter(book=="Emma")
+#Let's look at the NRC lexicon only and remove Positive and Negative words
+#we'll use the emotion_words dataframe created previously
+
+emotion_words_trim=emotion_words%>%
+  filter(!(sentiment %in% c("positive","negative")))
+
+str(tidy_book_emma)
+
+# we want to join the tidy_book_emma dataframe with emotion words trim using inner join
+
+#and count the sentiments grouped by chapter
+
+tidy_book_emma_emotion=tidy_book_emma%>%
+  inner_join(emotion_words_trim)%>%
+  group_by(chapter)%>%
+  count(sentiment)
+
+#first let's plot the emotions as a chapter facet
+
+#we'll see how the emotion varies by chapter
+
+tail(tidy_book_emma_emotion)
+ggplot(tidy_book_emma_emotion,aes(chapter,n,color=sentiment))+geom_bar(stat="identity",show.legend = FALSE)+
+  facet_wrap(~sentiment,ncol = 4)+xlim(0,60)+labs(x="Chapters",y="Count of words expressing emotions",title="Emotion Analysis of Jane Austen's Novel - Emma ")
 
 #lets now use bing lexicon to count the number of positive and negative words
 
