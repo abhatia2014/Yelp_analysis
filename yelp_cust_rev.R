@@ -144,3 +144,11 @@ cor(words_afinn$average_stars,words_afinn$afinn_score)
 ggplot(words_afinn,aes(afinn_score,average_stars,group=afinn_score))+
   geom_point()+
   geom_text(aes(label=word),check_overlap = TRUE,vjust=1,hjust=1,size=2)
+
+ggplot(words_afinn,aes(reviews,average_stars,col=afinn_score))+
+  geom_point()+scale_x_log10()+scale_color_gradient(low="red",high = "blue")+
+  geom_text(aes(label=word),check_overlap = TRUE,vjust=1,hjust=1,size=3)+theme_bw()
+
+# END ---------------------------------------------------------------------
+
+
