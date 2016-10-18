@@ -71,3 +71,76 @@ reviews_sentiment
 library(ggplot2)
 ggplot(reviews_sentiment,aes(stars,sentiment,group=stars))+
   geom_boxplot()+ylab("Average Sentiment Score")
+
+cor(reviews_sentiment$stars,reviews_sentiment$sentiment)
+#57.3% positive correlation
+
+#though it is well correlated, there are some five star ratings with negative sentiment score
+
+#which words are suggestive of positive reviews and which words are suggestive of negative reviews
+
+?count
+review_words_counted=review_words%>%
+  count(review_id,business_id,stars,word)%>%
+  ungroup()
+
+word_summaries=review_words_counted%>%
+  group_by(word)%>%
+  summarize(businesses=n_distinct(business_id),
+            reviews=n(),
+            uses=sum(n),
+            average_stars=mean(stars))%>%
+  ungroup()
+
+word_summaries
+tail(word_summaries,10)
+
+#let's only look at words that appear in atleast 200 times out of 2M reviews
+#also only filter out the words that appear in atleast 10 businesses
+
+
+word_summaries_filtered=word_summaries%>%
+  filter(reviews>=200,businesses>=10)
+word_summaries_filtered
+
+#what are the most positive or negative words based on star ratings
+
+word_summaries_filtered%>%
+  arrange(desc(average_stars))
+
+#and the most negative
+
+word_summaries_filtered%>%
+  arrange(average_stars)
+
+#lets now plot positivity by frequency
+
+ggplot(word_summaries_filtered,aes(reviews,average_stars))+
+  geom_point()+geom_text(aes(label=word),check_overlap = TRUE,vjust=1,hjust=1,size=2)+
+  scale_x_log10()+
+  geom_hline(yintercept = mean(review_words$stars),color="red",lty=2)+
+  xlab("#of Reviews")+ylab("Average Stars")
+
+#compare with the scores from AFINN lexicon using innerjoin
+
+words_afinn=word_summaries_filtered%>%
+  inner_join(AFINN)
+words_afinn
+
+#plot it using ggplot
+
+ggplot(words_afinn,aes(afinn_score,average_stars,group=afinn_score))+
+  geom_boxplot()+
+  xlab("AFINN Score of Word")+
+  ylab("Average Star reviews")
+
+#so here there is a clear correlation between the affin_score and average_Stars
+
+cor(words_afinn$average_stars,words_afinn$afinn_score)
+#+6646 correlation which is very high
+
+#to check which positive and negative words were more successful in predicting
+
+ggplot(words_afinn,aes(afinn_score,average_stars,group=afinn_score))+
+  geom_point()+
+  geom_text(aes(label=word),check_overlap = TRUE,vjust=1,hjust=1,size=2)
