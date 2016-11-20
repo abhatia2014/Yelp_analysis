@@ -1,4 +1,4 @@
-
+getwd()
 
 # Evaluating Jane Austin Novels Using Janeautenr package ------------------
 
@@ -6,7 +6,7 @@
 library(janeaustenr)
 library(dplyr)
 library(stringr)
-
+?regex
 original_books=austen_books() %>%
   group_by(book)%>%
   mutate(linenumber=row_number(),
@@ -16,7 +16,7 @@ original_books=austen_books() %>%
 original_books
 table(original_books$chapter,by=original_books$book)
 library(tidytext)
-
+library(mlr)
 #convert to one token per row format using the unnest_tokens function
 
 ?unnest_tokens
@@ -32,10 +32,13 @@ names(tidy_books)
 #anti join returns all rows from x where there are not matching values in y keeping just the columns from x
 
 data("stop_words")
+head(stop_words,30)
+table(stop_words$lexicon)
 #stop_words is a dataset in tidy_Text
 
 tidy_books=tidy_books%>%
-  anti_join(stop_words)
+  anti_join(stop_words)%>%
+  arrange(linenumber)
 #217609 words, 
 725054-217609
 # remove 507445 stop words
@@ -67,7 +70,7 @@ table(sentiments$sentiment,by=sentiments$lexicon)
 
 #positive and negative part of the bing lexicon 
 
-#let's look at the words with the joy score in the nrc lexicon,
+#let's look at the words with the joy score in the nrc lexicon, (689 words)
 #most common joy words in Emma novel
 
 nrcjoy=sentiments%>%
@@ -115,7 +118,7 @@ word_book=tidy_books%>%
 
 #join the dataframes book_emotions and word_book
 
-?semi_join
+
 
 book_emotions_join=book_emotions%>%
   inner_join(word_book)%>%
@@ -321,7 +324,90 @@ library(igraph)
 
 set.seed(1813)
 
-word_occurances %>%
-  filter(n>=10)%>%
-  graph_from_data_frame()
+#predictive analytics (machine learning)
+#Now we'll try and predict the book, given the words, 
+#let's consider the tidy_books dataset
+
+tidy_books
   
+#remove linenumber and chapter
+
+tidy_books_try=tidy_books[,c(1,4)]
+
+str(tidy_books_try)
+
+#take a sample out as training set and testset
+
+trainID=sample(nrow(tidy_books_try),0.65*nrow(tidy_books_try),replace = FALSE)
+
+head(trainID)
+testID=setdiff(1:nrow(tidy_books_try),trainID)
+length(trainID)
+length(testID)
+#change the word to feature factor
+
+tidy_books_try$word=factor(tidy_books_try$word)
+tidy.train=tidy_books_try[trainID,]
+tidy.test=tidy_books_try[testID,]
+
+#create a train and test task
+
+tidy.train=as.data.frame(tidy.train)
+tidy.test=as.data.frame(tidy.test)
+
+tidy.train.task=makeClassifTask(data = tidy.train,target = "book")
+
+#similarly create a task for tidy.test.task
+
+tidy.test.task=makeClassifTask(data=tidy.test,target = "book")
+
+tidy.train.task
+
+#find models for multiclassification
+
+mylearners=listLearners(tidy.train.task)
+
+
+# Benchmarking to select the right model ----------------------------------
+
+learners=list(makeLearner('classif.C50'),makeLearner('classif.boosting'),makeLearner('classif.glmnet'))
+
+
+resamp.bench=makeResampleDesc("Holdout")
+
+tidy.benchmark=benchmark(learners = learners,tasks = tidy.train.task,resamplings = resamp.bench,measures = list(acc,mmce))
+
+
+
+#we'll use ksvm to do the predictions
+
+getParamSet("classif.ksvm")
+
+#1. make learner
+
+ksvmlearner=makeLearner("classif.ksvm",predict.type = "response")
+
+#2. create the search space
+
+searchksvm=makeParamSet(
+  makeDiscreteParam("C",values=2^c(-8,-4,-2,0,2)),
+  makeDiscreteParam("sigma",values=2^c(-8,-4,0,4))
+  
+)
+
+#3. specify search algorithm
+
+search.algo.ksvm=makeTuneControlGrid()
+
+#4. specify resampling strategy
+
+sample.ksvm=makeResampleDesc("CV",iters=3)
+
+#5. set performance measures
+
+measures.ksvm=acc
+
+#tuning the hyperparameters to select the best tuning parameters
+
+ksvm.tune=tuneParams(learner = ksvmlearner,task = tidy.train.task,resampling = sample.ksvm,
+                    par.set = searchksvm,control = search.algo.ksvm,measures = measures.ksvm)
